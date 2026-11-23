@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>คำนวณต้นทุนหุ้น</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3f6f4;--card:#fff;--ink:#16231d;--mute:#5f6f67;--line:#d5ded9;--acc:#0f7a4d;--accink:#fff;--out:#e4f2ea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101814;--card:#18231d;--ink:#e8f1ec;--mute:#93a69b;--line:#2b3b32;--acc:#3fc489;--accink:#07200f;--out:#1e3329}}
+:root[data-theme="dark"]{--bg:#101814;--card:#18231d;--ink:#e8f1ec;--mute:#93a69b;--line:#2b3b32;--acc:#3fc489;--accink:#07200f;--out:#1e3329}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans Thai","Sarabun",system-ui,sans-serif;line-height:1.5}
+main{max-width:460px;margin:0 auto;padding:20px 16px 32px}
+h1{font-size:1.35rem;margin:0 0 4px}
+p.sub{margin:0 0 16px;color:var(--mute);font-size:.9rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+label{display:block;font-size:.88rem;color:var(--mute);margin:12px 0 4px}
+label:first-child{margin-top:0}
+input{width:100%;font:inherit;font-size:1.1rem;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+input:focus{outline:2px solid var(--acc);outline-offset:1px}
+.row{display:flex;gap:10px}.row>div{flex:1}
+button{width:100%;margin-top:16px;font:inherit;font-size:1.1rem;font-weight:600;padding:13px;border:0;border-radius:10px;background:var(--acc);color:var(--accink);cursor:pointer}
+.res{background:var(--out);border-color:transparent}
+.line{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--line)}
+.line:last-child{border:0}
+.line span:first-child{color:var(--mute)}
+.line b{font-variant-numeric:tabular-nums}
+.total{font-size:1.25rem;padding-top:12px}
+.total span:first-child{color:var(--ink);font-weight:600}
+.total b{color:var(--acc)}
+.pos{color:var(--acc)!important}.neg{color:#d64545!important}h2{font-size:1.05rem;margin:0 0 10px}.err{color:#c0392b;font-size:.9rem;margin-top:10px;display:none}
+details{font-size:.88rem;color:var(--mute)}
+summary{cursor:pointer;margin-bottom:6px}
+.note{font-size:.78rem;color:var(--mute);margin:0}
+</style>
+</head>
+<body>
+<main>
+<h1>คำนวณต้นทุนหุ้น</h1>
+<p class="sub">ค่าคอมมิชชั่น 0.16799% (รวม VAT แล้ว)</p>
+
+<div class="card">
+<h2>ยอดซื้อ</h2>
+<label for="qty">จำนวนหุ้น</label>
+<input id="qty" type="number" inputmode="numeric" placeholder="เช่น 1000" min="0">
+<label for="bp">ราคาซื้อต่อหุ้น (บาท)</label>
+<input id="bp" type="number" inputmode="decimal" placeholder="เช่น 25.50" min="0" step="any">
+<div class="err" id="e1">กรุณาใส่จำนวนและราคาซื้อให้ถูกต้อง</div>
+</div>
+<div class="card res" id="o" hidden>
+<div class="line"><span>มูลค่าหุ้น</span><b id="b1"></b></div>
+<div class="line"><span>ค่าคอมมิชชั่น</span><b id="b2"></b></div>
+<div class="line"><span>ต้นทุนต่อหุ้น</span><b id="b3"></b></div>
+<div class="line total"><span>ยอดซื้อทั้งหมด</span><b id="b4"></b></div>
+</div>
+
+<div class="card">
+<h2>ยอดขาย</h2>
+<label for="sq">จำนวนหุ้นที่ขาย (ว่าง = เท่ากับที่ซื้อ)</label>
+<input id="sq" type="number" inputmode="numeric" placeholder="เท่ากับจำนวนซื้อ" min="0">
+<label for="sp">ราคาขายต่อหุ้น (บาท)</label>
+<input id="sp" type="number" inputmode="decimal" placeholder="เช่น 27.00" min="0" step="any">
+<div class="err" id="e2">กรุณาคำนวณยอดซื้อก่อน และใส่ราคาขายให้ถูกต้อง</div>
+</div>
+<div class="card res" id="s" hidden>
+<div class="line"><span>มูลค่าหุ้น</span><b id="s1"></b></div>
+<div class="line"><span>ค่าคอมมิชชั่น</span><b id="s2"></b></div>
+<div class="line"><span>ยอดขายสุทธิ</span><b id="s3"></b></div>
+<div class="line total"><span>กำไร/ขาดทุน</span><b id="s4"></b></div>
+</div>
+
+<button id="go" type="button">คำนวณ</button>
+<p class="note" style="margin-top:12px">ผลคำนวณเป็นการประมาณการเท่านั้น อัตราจริงขึ้นอยู่กับโบรกเกอร์</p>
+</main>
+<script>
+(function(){
+var R=0.16799/100;
+var $=function(i){return document.getElementById(i)};
+var f=function(n,d){return n.toLocaleString("th-TH",{minimumFractionDigits:d,maximumFractionDigits:d})};
+function calc(){
+var q=parseFloat($("qty").value),bp=parseFloat($("bp").value);
+var ok=q>0&&bp>0;
+$("e1").style.display=ok?"none":"block";
+$("o").hidden=!ok;$("s").hidden=true;$("e2").style.display="none";
+if(!ok)return;
+var bv=q*bp,bc=bv*R,bt=bv+bc;
+$("b1").textContent=f(bv,2)+" บาท";
+$("b2").textContent=f(bc,2)+" บาท";
+$("b3").textContent=f(bt/q,4)+" บาท";
+$("b4").textContent=f(bt,2)+" บาท";
+var sp=parseFloat($("sp").value);
+if(!$("sp").value)return;
+var sq=parseFloat($("sq").value)||q;
+if(!(sp>0)||sq>q){$("e2").textContent=sq>q?"จำนวนที่ขายมากกว่าที่ซื้อ":"กรุณาใส่ราคาขายให้ถูกต้อง";$("e2").style.display="block";return}
+var sv=sq*sp,sc=sv*R,sn=sv-sc,cost=bt/q*sq,pl=sn-cost,pc=pl/cost*100;
+$("s1").textContent=f(sv,2)+" บาท";
+$("s2").textContent=f(sc,2)+" บาท";
+$("s3").textContent=f(sn,2)+" บาท";
+var e=$("s4");
+e.textContent=(pl>0?"+":"")+f(pl,2)+" บาท ("+(pl>0?"+":"")+f(pc,2)+"%)";
+e.className=pl>0?"pos":pl<0?"neg":"";
+$("s").hidden=false;
+$("s").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+$("go").addEventListener("click",calc);
+["qty","bp","sq","sp"].forEach(function(i){$(i).addEventListener("keydown",function(e){if(e.key==="Enter")calc()})});
+})();
+</script>
+</body>
+</html>
